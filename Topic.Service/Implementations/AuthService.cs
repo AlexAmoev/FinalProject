@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,6 +23,8 @@ namespace Topic.Service.Implementations
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        //private readonly IdentityUserRole<User, IdentityRole> _userRoleManager;
+        //private readonly ModelBuilder _modelBuilder;
         private readonly ICommentRepository _commentRepository;
         private readonly ITopicRepository _topicRepository;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
@@ -32,7 +35,7 @@ namespace Topic.Service.Implementations
 
         public AuthService(ApplicationDbContext context, UserManager<User> userManager,
             RoleManager<IdentityRole> roleManager, IJwtTokenGenerator jwtTokenGenerator,
-            IHttpContextAccessor httpContextAccessor, ICommentRepository commentRepository, ITopicRepository topicRepository)
+            IHttpContextAccessor httpContextAccessor, ICommentRepository commentRepository, ITopicRepository topicRepository /*,  ModelBuilder modelBuilder */)
         {
             _context = context;
             _userManager = userManager;
@@ -42,6 +45,7 @@ namespace Topic.Service.Implementations
             _httpContextAccessor = httpContextAccessor;
             _mapper = MappingInitializer.Initialize();
             _topicRepository = topicRepository;
+            //_modelBuilder = modelBuilder;
         }
 
         public async Task<LoginResponseDTO> Login(LoginRequestDTO loginRequestDTO)
@@ -93,6 +97,7 @@ namespace Topic.Service.Implementations
                 PhoneNumber = registrationRequestDTO.PhoneNumber
             };
 
+
             try
             {
                 IdentityResult result = await _userManager.CreateAsync(user, registrationRequestDTO.Password);
@@ -120,6 +125,15 @@ namespace Topic.Service.Implementations
                 {
                     throw new RegistrationFailureException(result.Errors.FirstOrDefault().Description);
                 }
+                if(user != null)
+                {
+                    var res = await _userManager.AddToRoleAsync(user, _customerRole);
+                }
+
+                var rawUser = await _context.Users.FirstOrDefaultAsync(x => x.Id == user.Id);
+                rawUser.LockoutEnabled = false;
+                _context.SaveChanges();
+
             }
             catch (Exception ex)
             {
@@ -129,13 +143,16 @@ namespace Topic.Service.Implementations
 
         public async Task RegisterAdmin(RegistrationRequestDTO registrationRequestDTO)
         {
+
+            PasswordHasher<User> hasher = new();
             User user = new()
             {
                 UserName = registrationRequestDTO.Email,
                 NormalizedUserName = registrationRequestDTO.Email.ToUpper(),
                 Email = registrationRequestDTO.Email,
                 NormalizedEmail = registrationRequestDTO.Email.ToUpper(),
-                PhoneNumber = registrationRequestDTO.PhoneNumber
+                PhoneNumber = registrationRequestDTO.PhoneNumber,
+                PasswordHash = hasher.HashPassword(null, registrationRequestDTO.Password)
             };
 
             try
@@ -165,6 +182,18 @@ namespace Topic.Service.Implementations
                 {
                     throw new RegistrationFailureException(result.Errors.FirstOrDefault().Description);
                 }
+
+                if (user != null)
+                {
+                    var res = await _userManager.AddToRoleAsync(user, _adminRole);
+                }
+
+                //PasswordHasher<User> hasher = new();
+
+                var rawUser = await _context.Users.FirstOrDefaultAsync(x => x.Id == user.Id);
+                rawUser.LockoutEnabled = false;
+                //user.PasswordHash = hasher.HashPassword(null, user.);
+                _context.SaveChanges();
             }
             catch (Exception ex)
             {
@@ -317,6 +346,8 @@ namespace Topic.Service.Implementations
                 //result[i].Comments = commentCount;
                 //result[i].Topics = topicCount;
             }
+
+            
 
             return result;
         }
@@ -507,6 +538,17 @@ namespace Topic.Service.Implementations
         //    {
         //        throw new UnauthorizedAccessException("Can't get credentials of unauthorized user");
         //    }
+        //}
+
+        
+
+        //public void SeedUserRoles(this ModelBuilder modelBuilder)
+        //{
+        //    modelBuilder.Entity<IdentityUserRole<string>>().HasData(
+        //        new IdentityUserRole<string> { RoleId = "33B7ED72-9434-434A-82D4-3018B018CB87", UserId = "8716071C-1D9B-48FD-B3D0-F059C4FB8031" },
+        //        new IdentityUserRole<string> { RoleId = "9C07F9F6-D3B0-458A-AB7F-218AA622FA5B", UserId = "D514EDC9-94BB-416F-AF9D-7C13669689C9" },
+        //        new IdentityUserRole<string> { RoleId = "9C07F9F6-D3B0-458A-AB7F-218AA622FA5B", UserId = "87746F88-DC38-4756-924A-B95CFF3A1D8A" }
+        //        );
         //}
     }
 }

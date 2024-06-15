@@ -12,7 +12,7 @@ namespace Topic.Models.Identity
         public string? Role { get; set; }
         public string? UserName { get; set; }
         public string? Email { get; set; }
-        public int? PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
         public int? Topics { get; set; }
         public int? Comments { get; set; }
         public bool Banned { get; set; }
