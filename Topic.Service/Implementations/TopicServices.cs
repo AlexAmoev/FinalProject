@@ -735,10 +735,15 @@ namespace Topic.Service.Implementations
 
             var topic = await _topicRepository.GetSingleTopicsAsync(x => x.Id == commentForUpdatingDTO.TopicEntityId);
 
-            if (topic.Status == Status.Inactive)
+
+            if (AuthenticatedUserRole() != "Admin")
             {
-                throw new InactiveStatusException();
+                if (topic.Status == Status.Inactive)
+                {
+                    throw new InactiveStatusException();
+                }
             }
+            
 
 
 
@@ -763,10 +768,14 @@ namespace Topic.Service.Implementations
                 throw new UnauthorizedAccessException("Unauthorized user can't update topic !");
             }
 
-            if (topic.Status == Status.Inactive)
+            if (AuthenticatedUserRole() != "Admin")
             {
-                throw new InactiveStatusException();
+                if (topic.Status == Status.Inactive)
+                {
+                    throw new InactiveStatusException();
+                }
             }
+            
 
             topicForUpdatingDTO.addUserId(AuthenticatedUserId());
 
